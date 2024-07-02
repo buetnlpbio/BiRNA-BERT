@@ -1,4 +1,12 @@
 Authors' implementation of **BiRNA-BERT Allows Efficient RNA Language Modeling with Adaptive Tokenization**
+
+## BiRNA-BERT
+
+BiRNA-BERT is a BERT-style transformer encoder model that generates embeddings for RNA sequences. BiRNA-BERT has been trained on BPE tokens and individual nucleotides. As a result, it can generate both granular nucleotide-level embeddings and efficient sequence-level embeddings (using BPE).
+
+BiRNA-BERT was trained using the MosaicBERT framework - https://huggingface.co/mosaicml/mosaic-bert-base
+
+
 ## Extracting RNA embeddings
 
 ```python
