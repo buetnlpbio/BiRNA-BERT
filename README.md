@@ -1,8 +1,3 @@
-## Download Model and Tokenizer
-
-[Download model](https://file.io/EdXPvXfFBNU5) <br>
-[Download tokenizer](https://file.io/dPlREMjAuDBs)
-
 
 ## Extracting RNA embeddings
 
@@ -34,3 +29,9 @@ config.alibi_starting_size = 2048 # maximum sequence length updated to 2048 from
 
 mysterybert = AutoModelForMaskedLM.from_pretrained("buetnlpbio/birna-bert",config=config,trust_remote_code=True)
 ```
+
+## Download Model and Tokenizer (External Link)
+
+[Download model](https://file.io/EdXPvXfFBNU5) <br>
+[Download tokenizer](https://file.io/dPlREMjAuDBs)
+
