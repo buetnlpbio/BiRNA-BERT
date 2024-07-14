@@ -13,8 +13,8 @@ Batch size 32
 
 Baseline: 3 epochs. 5e-4 LR. 0.1 WarmUp
 
-\*     30 epochs. 1e-3 LR. 0.05 WarmUp
-\**    20 epochs
-\***   5 epochs
-\****  1e-3 LR, 0.05 WarmUp
-(*)    1e-5 LR, 0.1 WarmUp, 5 epoch
+\*     30 epochs. 1e-3 LR. 0.05 WarmUp <br>
+\**    20 epochs <br>
+\***   5 epochs <br>
+\****  1e-3 LR, 0.05 WarmUp <br>
+(*)    1e-5 LR, 0.1 WarmUp, 5 epoch <br>
