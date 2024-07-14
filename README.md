@@ -1,6 +1,7 @@
 Authors' implementation of **BiRNA-BERT Allows Efficient RNA Language Modeling with Adaptive Tokenization**
 
 🤗[BiRNA-BERT Model Zoo](https://huggingface.co/collections/buetnlpbio/birna-bert-66840c2645d8ceb446b6c919)
+- [Paper Link](https://www.biorxiv.org/content/10.1101/2024.07.02.601703v1)
 ## BiRNA-BERT
 
 BiRNA-BERT is a BERT-style transformer encoder model that generates embeddings for RNA sequences. BiRNA-BERT has been trained on BPE tokens and individual nucleotides. As a result, it can generate both granular nucleotide-level embeddings and efficient sequence-level embeddings (using BPE).
