@@ -1,6 +1,6 @@
 **Finetuning Hyperparamters**
 
-| Dataset    | RNAFM (truncated)  | Rindlmo (truncated) | NUC-BPE model (NUC) (truncated) | NUC-BPE model (BPE) | SOTA (truncated)|
+| Dataset    | RNAFM (truncated)  | RiNALMo (truncated) |  BiRNA-BERT (NUC) (truncated) | BiRNA-BERT (BPE) | CORAIN (truncated)|
 |------------|--------------------|--------------------|---------------------------------|---------------------|-----------------|
 | ATH-GMA    | 68.56              | 72.14              | 72.56                           | 75.52               | 69              |
 | ATH-MTR    | 71.68              | 75.38***           | 77.90                           | 79.56               | 74              |
