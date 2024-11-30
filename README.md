@@ -45,3 +45,17 @@ mysterybert = AutoModelForMaskedLM.from_pretrained("buetnlpbio/birna-bert",confi
 [Download model](https://file.io/EdXPvXfFBNU5) <br>
 [Download tokenizer](https://file.io/dPlREMjAuDBs)
 
+## Citation
+```
+@article {Tahmid2024.07.02.601703,
+	author = {Tahmid, Md Toki and Shahgir, Haz Sameen and Mahbub, Sazan and Dong, Yue and Bayzid, Md. Shamsuzzoha},
+	title = {BiRNA-BERT Allows Efficient RNA Language Modeling with Adaptive Tokenization},
+	elocation-id = {2024.07.02.601703},
+	year = {2024},
+	doi = {10.1101/2024.07.02.601703},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2024/07/04/2024.07.02.601703},
+	eprint = {https://www.biorxiv.org/content/early/2024/07/04/2024.07.02.601703.full.pdf},
+	journal = {bioRxiv}
+}
+```
