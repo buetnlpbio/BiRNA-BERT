@@ -25,12 +25,12 @@ os.environ['PYTHONHASHSEED'] = str(SEED)
 
 MODEL_NAME = "buetnlpbio/birna-bert"
 TOKENIZER = "buetnlpbio/birna-tokenizer"
-LR = 5e-4
+LR = 1e-5
 BATCH_SIZE = 32
 DEVICE = "cuda"
 WARMUP_RATIO = 0.1
-EPOCHS = 5
-DATASET = "gma-ath"
+EPOCHS = 10
+DATASET = "ath-mtr"
 
 
 import pandas as pd
@@ -214,7 +214,7 @@ class RNA_RNA(Dataset):
         label = self.labels[idx]
         label_tensor = torch.tensor(label, dtype=torch.int64).to(device)
 
-        return  (input_ids_mirna,input_ids_lncrna), label_tensor
+        return  (input_ids_mirna, input_ids_lncrna), label_tensor, len(self.list_lncrna[idx])
 
 
 def get_list_seperated(list):
@@ -228,7 +228,7 @@ def get_list_seperated(list):
 
 def custom_collate_fn(batch):
     # Unzip the batch
-    inputs, labels = zip(*batch)
+    inputs, labels, lncrna_lengths = zip(*batch)
     input_ids_mirna, input_ids_lncrna = zip(*inputs)
 
     input_ids_mirna_padded = pad_sequence(input_ids_mirna, batch_first=True, padding_value=tokenizer.pad_token_id)
@@ -240,7 +240,7 @@ def custom_collate_fn(batch):
     # Convert labels to a tensor
     labels = torch.tensor(labels, dtype=torch.float16)
 
-    return (input_ids_mirna_padded, attention_mask_mirna, input_ids_lncrna_padded, attention_mask_lncrna), labels
+    return (input_ids_mirna_padded, attention_mask_mirna, input_ids_lncrna_padded, attention_mask_lncrna), labels, lncrna_lengths
 
 # When creating DataLoaders, add worker_init_fn and generator
 def seed_worker(worker_id):
@@ -366,7 +366,7 @@ def validate(model, dataloader, criterion, device):
     }
 
     with torch.no_grad():
-        for (input_ids_mirna, attention_mask_mirna, input_ids_lncrna, attention_mask_lncrna), labels in tqdm(dataloader):
+        for (input_ids_mirna, attention_mask_mirna, input_ids_lncrna, attention_mask_lncrna), labels, lncrna_lengths in tqdm(dataloader):
             input_ids_mirna = input_ids_mirna.to(device).long()
             input_ids_lncrna = input_ids_lncrna.to(device).long()
             attention_mask_mirna = attention_mask_mirna.to(device).float()
@@ -385,12 +385,9 @@ def validate(model, dataloader, criterion, device):
             batch_correct = (predicted_labels == labels).float()
             total_correct += batch_correct.sum().item()
             total_samples += labels.size(0)            
-            # Decode input IDs to get actual sequence lengths
-            decoded_sequences = tokenizer.batch_decode(input_ids_lncrna, skip_special_tokens=True)
-            actual_lengths = [len(seq.replace(" ", "")) for seq in decoded_sequences]
             
             # Bin the accuracies by sequence length
-            for i, length in enumerate(actual_lengths):
+            for i, length in enumerate(lncrna_lengths):
                 if length <= 500:
                     bin_key = '1-500'
                 elif length <= 1000:
@@ -430,7 +427,7 @@ for epoch_count in range(1,num_epochs+1):
 
     optimizer.zero_grad()
 
-    for batch_idx, ((input_ids_mirna, attention_mask_mirna, input_ids_lncrna, attention_mask_lncrna), labels) in enumerate(tqdm(train_loader)):
+    for batch_idx, ((input_ids_mirna, attention_mask_mirna, input_ids_lncrna, attention_mask_lncrna), labels, lncrna_lengths) in enumerate(tqdm(train_loader)):
         input_ids_mirna = input_ids_mirna.to(device).long()
         input_ids_lncrna = input_ids_lncrna.to(device).long()
         attention_mask_mirna = attention_mask_mirna.to(device).float()
