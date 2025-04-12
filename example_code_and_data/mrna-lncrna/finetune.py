@@ -8,15 +8,24 @@ import transformers
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 import random
 import numpy as np
+import os
 
-random.seed(42)
-np.random.seed(42)
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
 
-MODEL_NAME = "../../MODEL"
-TOKENIZER = "../../TOKENIZER"
-LR = 1e-5
+torch.cuda.manual_seed_all(SEED)  # if using multiple GPUs
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+os.environ['PYTHONHASHSEED'] = str(SEED)
+
+
+MODEL_NAME = "buetnlpbio/birna-bert"
+TOKENIZER = "buetnlpbio/birna-tokenizer"
+LR = 5e-4
 BATCH_SIZE = 32
 DEVICE = "cuda"
 WARMUP_RATIO = 0.1
@@ -188,6 +197,9 @@ class RNA_RNA(Dataset):
         #bpe tokenization for long sequences
         seq_lncrna = self.list_lncrna[idx].replace('U', 'T')
 
+        # seq_lncrna = seq_lncrna[:1022]
+        # seq_lncrna = " ".join(seq_lncrna)
+
 
         tokenized_output_mirna = tokenizer(seq_mirna, return_tensors="pt")
         tokenized_output_mirna = tokenized_output_mirna.to(device)
@@ -230,18 +242,28 @@ def custom_collate_fn(batch):
 
     return (input_ids_mirna_padded, attention_mask_mirna, input_ids_lncrna_padded, attention_mask_lncrna), labels
 
+# When creating DataLoaders, add worker_init_fn and generator
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+g = torch.Generator()
+g.manual_seed(SEED)
 
 list_mirna, list_lncrna = get_list_seperated(ath_dataset_pairs)
 ath_dataset = RNA_RNA(list(zip(list_mirna, list_lncrna)), ath_dataset_labels)
-ath_dataloader = DataLoader(ath_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate_fn)
+ath_dataloader = DataLoader(ath_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate_fn, generator=g, worker_init_fn=seed_worker)
 
 list_mirna, list_lncrna = get_list_seperated(gma_dataset_pairs)
 gma_dataset = RNA_RNA(list(zip(list_mirna, list_lncrna)), gma_dataset_labels)
-gma_dataloader = DataLoader(gma_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate_fn)
+gma_dataloader = DataLoader(gma_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate_fn, generator=g, worker_init_fn=seed_worker)
+
 
 list_mirna, list_lncrna = get_list_seperated(mtr_dataset_pairs)
 mtr_dataset = RNA_RNA(list(zip(list_mirna, list_lncrna)), mtr_dataset_labels)
-mtr_dataloader = DataLoader(mtr_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate_fn)
+mtr_dataloader = DataLoader(mtr_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate_fn, generator=g,worker_init_fn=seed_worker)
+
 
 
 class DualBertClassifier(nn.Module):
@@ -328,6 +350,20 @@ def validate(model, dataloader, criterion, device):
     total_loss = 0
     total_correct = 0
     total_samples = 0
+    
+    # Initialize bins for length-based accuracy
+    length_bins = {
+        '1-500': {'correct': 0, 'total': 0},
+        '501-1000': {'correct': 0, 'total': 0},
+        '1001-1500': {'correct': 0, 'total': 0},
+        '1501-2000': {'correct': 0, 'total': 0},
+        '2001-2500': {'correct': 0, 'total': 0},
+        '2501-3000': {'correct': 0, 'total': 0},
+        '3001-3500': {'correct': 0, 'total': 0},
+        '3501-4000': {'correct': 0, 'total': 0},
+        '4000+': {'correct': 0, 'total': 0}
+        
+    }
 
     with torch.no_grad():
         for (input_ids_mirna, attention_mask_mirna, input_ids_lncrna, attention_mask_lncrna), labels in tqdm(dataloader):
@@ -346,12 +382,41 @@ def validate(model, dataloader, criterion, device):
 
             # Calculate accuracy
             predicted_labels = (logits > 0.5).float()  # Convert probabilities to binary output
-            total_correct += (predicted_labels == labels).sum().item()
-            total_samples += labels.size(0)
+            batch_correct = (predicted_labels == labels).float()
+            total_correct += batch_correct.sum().item()
+            total_samples += labels.size(0)            
+            # Decode input IDs to get actual sequence lengths
+            decoded_sequences = tokenizer.batch_decode(input_ids_lncrna, skip_special_tokens=True)
+            actual_lengths = [len(seq.replace(" ", "")) for seq in decoded_sequences]
+            
+            # Bin the accuracies by sequence length
+            for i, length in enumerate(actual_lengths):
+                if length <= 500:
+                    bin_key = '1-500'
+                elif length <= 1000:
+                    bin_key = '501-1000'
+                elif length <= 1500:
+                    bin_key = '1001-1500'
+                elif length <= 2000:
+                    bin_key = '1501-2000'
+                elif length <= 2500:
+                    bin_key = '2001-2500'
+                elif length <= 3000:
+                    bin_key = '2501-3000'
+                elif length <= 3500:
+                    bin_key = '3001-3500'
+                elif length <= 4000:
+                    bin_key = '3501-4000'
+                else:
+                    bin_key = '4000+'
+                    
+                length_bins[bin_key]['correct'] += batch_correct[i].item()
+                length_bins[bin_key]['total'] += 1
 
     average_loss = total_loss / len(dataloader)
     accuracy = total_correct / total_samples
-    return average_loss, accuracy
+    
+    return average_loss, accuracy, length_bins
 
 
 
@@ -387,11 +452,33 @@ for epoch_count in range(1,num_epochs+1):
         optimizer.zero_grad()
 
 
-
-    test_loss, test_accuracy = validate(model, test_loader, criterion, device)
-    print(f'Step {epoch_count}, Test Loss: {test_loss}, Test Accuracy: {test_accuracy * 100:.2f}%')
-
-
     average_loss = total_loss / len(train_loader)
     accuracy = total_correct / total_samples
     print(f'Epoch {epoch_count}, Training Loss: {average_loss}, Training Accuracy: {accuracy * 100:.2f}%')
+
+
+    test_loss, test_accuracy, length_bins = validate(model, test_loader, criterion, device)
+    print(f'Epoch {epoch_count}, Test Loss: {test_loss}, Test Accuracy: {test_accuracy * 100:.2f}%')
+
+    from prettytable import PrettyTable
+    
+    length_accuracies = {}
+    table = PrettyTable()
+    table.field_names = ["Bin", "Total", "Correct", "Accuracy"]
+    
+    for bin_key, counts in length_bins.items():
+        if counts['total'] > 0:
+            accuracy = counts['correct'] / counts['total']
+            table.add_row([
+                bin_key,
+                counts['total'],
+                counts['correct'],
+                f"{accuracy * 100:.2f}%"
+            ])
+            length_accuracies[bin_key] = counts['correct'] / counts['total']
+        else:
+            table.add_row([bin_key, 0, 0, "0.00%"])
+            length_accuracies[bin_key] = 0.0
+            
+    print(table)
+            
