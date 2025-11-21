@@ -1,3 +1,5 @@
+## This current version is substantially updated than the previous ones and we suggest re-analyses of any data which was analyzed using prior versions of BIRNA-BERT ##
+
 Authors' implementation of **BiRNA-BERT Allows Efficient RNA Language Modeling with Adaptive Tokenization**
 
 🤗[BiRNA-BERT Model Zoo](https://huggingface.co/collections/buetnlpbio/birna-bert-66840c2645d8ceb446b6c919)
@@ -79,3 +81,4 @@ mysterybert = AutoModelForMaskedLM.from_pretrained("buetnlpbio/birna-bert",confi
 	journal = {bioRxiv}
 }
 ```
+
